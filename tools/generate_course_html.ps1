@@ -34,6 +34,12 @@ $NoIntro = U @(0x8BE5, 0x9875, 0x9762, 0x672A, 0x63D0, 0x4F9B, 0x4E13, 0x5BB6, 0
 $GroupIntro = U @(0x8BA8, 0x8BBA, 0x533A, 0x6D3B, 0x52A8, 0xFF0C, 0x672A, 0x6807, 0x6CE8, 0x4E13, 0x5BB6, 0x3002)
 $IntroTitle = U @(0x4E13, 0x5BB6, 0x7B80, 0x4ECB)
 $ResourceTitle = U @(0x8BFE, 0x7A0B, 0x6587, 0x4EF6, 0x8D44, 0x6E90)
+$OpeningLeaderName = U @(0x5F00, 0x73ED, 0x81F4, 0x8F9E, 0x9886, 0x5BFC, 0x20, 0x848B, 0x51EF, 0x9662, 0x957F, 0x7B80, 0x4ECB)
+$JiangKai = U @(0x848B, 0x51EF)
+$OpeningLeaderTitle = U @(0x5F00, 0x73ED, 0x81F4, 0x8F9E, 0x9886, 0x5BFC, 0x7B80, 0x4ECB)
+$ReportIntroLabel = U @(0x62A5, 0x544A, 0x5185, 0x5BB9, 0x7B80, 0x4ECB)
+$CourseIntroLabel = U @(0x8BFE, 0x7A0B, 0x5185, 0x5BB9, 0x7B80, 0x4ECB)
+$ReportContentLabel = U @(0x62A5, 0x544A, 0x5185, 0x5BB9)
 $PageTitleFallback = U @(0x5317, 0x4EAC, 0x5927, 0x5B66, 0x0032, 0x0030, 0x0032, 0x0036, 0x201C, 0x6559, 0x80B2, 0x6280, 0x672F, 0x524D, 0x6CBF, 0x201D, 0x6691, 0x671F, 0x5B66, 0x6821)
 
 function Html-Decode {
@@ -149,13 +155,6 @@ function Download-Binary {
         }
         $safe = Sanitize-FileName ($Prefix + '-' + $baseName)
         $dest = Join-Path $Directory $safe
-        $i = 2
-        while (Test-Path -LiteralPath $dest) {
-            $name = [System.IO.Path]::GetFileNameWithoutExtension($safe)
-            $extension = [System.IO.Path]::GetExtension($safe)
-            $dest = Join-Path $Directory ($name + '-' + $i + $extension)
-            $i++
-        }
         Invoke-WebRequest -Uri $finalUrl -WebSession $Session -OutFile $dest -MaximumRedirection 10 -TimeoutSec 120 | Out-Null
         return [pscustomobject]@{
             Path = $dest
@@ -177,6 +176,231 @@ function Download-Binary {
             Error = $_.Exception.Message
         }
     }
+}
+
+function Extract-PageContentHtml {
+    param([string]$PageHtml)
+
+    $startMatch = [regex]::Match($PageHtml, '(?is)<div class="box py-3 generalbox[^>]*>')
+    if (-not $startMatch.Success) {
+        return ''
+    }
+
+    $start = $startMatch.Index
+    $end = $PageHtml.IndexOf('<div class="mt-5 mb-1 activity-navigation"', $start)
+    if ($end -lt 0) {
+        $end = $PageHtml.IndexOf('</section>', $start)
+    }
+    if ($end -lt 0) {
+        $end = [Math]::Min($PageHtml.Length, $start + 30000)
+    }
+
+    $body = $PageHtml.Substring($start, $end - $start)
+    $body = [regex]::Replace($body, '(?is)<div class="modified">.*?</div>', ' ')
+    return $body
+}
+
+function Extract-BodyLinks {
+    param(
+        [string]$BodyHtml,
+        [string]$BaseUrl
+    )
+
+    $links = New-Object System.Collections.Generic.List[object]
+    $seen = @{}
+    $matches = [regex]::Matches($BodyHtml, '(?is)<a\b[^>]*\bhref="([^"]+)"[^>]*>(.*?)</a>')
+    foreach ($match in $matches) {
+        $href = Resolve-Link $BaseUrl $match.Groups[1].Value
+        if ($seen.ContainsKey($href)) { continue }
+        $seen[$href] = $true
+        $label = Text-FromHtml $match.Groups[2].Value
+        if ([string]::IsNullOrWhiteSpace($label)) {
+            $label = $href
+        }
+        $links.Add([pscustomobject]@{
+            Href = $href
+            Label = $label
+        })
+    }
+    return $links.ToArray()
+}
+
+function Link-DisplayLabel {
+    param(
+        [string]$Label,
+        [string]$Href
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Label) -or $Label -match '^https?://') {
+        if ($Href -match 'disk\.pku\.edu\.cn') {
+            return $ReportContentLabel
+        }
+        return 'Link'
+    }
+    return $Label
+}
+
+function Resolve-PkuDiskTitle {
+    param([string]$Href)
+
+    if ($Href -notmatch 'disk\.pku\.edu\.cn/link/') {
+        return ''
+    }
+
+    try {
+        $response = Invoke-WebRequest -Uri $Href -MaximumRedirection 10 -TimeoutSec 60
+        $finalUrl = $response.BaseResponse.ResponseUri.AbsoluteUri
+        $match = [regex]::Match($finalUrl, '[?&]title=([^&]+)')
+        if ($match.Success) {
+            return [System.Net.WebUtility]::UrlDecode($match.Groups[1].Value)
+        }
+    } catch {
+        return ''
+    }
+
+    return ''
+}
+
+function Find-LocalReportFiles {
+    param(
+        [string]$Title,
+        [string]$Directory
+    )
+
+    $found = New-Object System.Collections.Generic.List[object]
+    if ([string]::IsNullOrWhiteSpace($Title) -or -not (Test-Path -LiteralPath $Directory)) {
+        return $found.ToArray()
+    }
+
+    $exact = Join-Path $Directory $Title
+    if (Test-Path -LiteralPath $exact) {
+        $file = Get-Item -LiteralPath $exact
+        $found.Add([pscustomobject]@{
+            FileName = $file.Name
+            LocalHref = 'assets/resources/' + (Relative-Href $file.Name)
+        })
+        return $found.ToArray()
+    }
+
+    $nameWithoutExtension = [System.IO.Path]::GetFileNameWithoutExtension($Title)
+    $prefixes = New-Object System.Collections.Generic.List[string]
+    if (-not [string]::IsNullOrWhiteSpace($nameWithoutExtension)) {
+        $firstToken = ($nameWithoutExtension -split '\s+')[0]
+        if ($firstToken.Length -ge 2) {
+            $prefixes.Add($firstToken)
+        }
+        if ($nameWithoutExtension.Length -ge 3) {
+            $prefixes.Add($nameWithoutExtension.Substring(0, 3))
+        }
+    }
+
+    $files = @(Get-ChildItem -LiteralPath $Directory -File -Filter '*.pdf' -ErrorAction SilentlyContinue)
+    foreach ($file in $files) {
+        foreach ($prefix in $prefixes) {
+            if ($file.Name.StartsWith($prefix)) {
+                $found.Add([pscustomobject]@{
+                    FileName = $file.Name
+                    LocalHref = 'assets/resources/' + (Relative-Href $file.Name)
+                })
+                break
+            }
+        }
+    }
+
+    return $found.ToArray()
+}
+
+function Enrich-ReportLinks {
+    param(
+        [object[]]$Links,
+        [string]$Directory
+    )
+
+    $enriched = New-Object System.Collections.Generic.List[object]
+    foreach ($link in @($Links)) {
+        $diskTitle = Resolve-PkuDiskTitle $link.Href
+        $localFiles = Find-LocalReportFiles -Title $diskTitle -Directory $Directory
+        $enriched.Add([pscustomobject]@{
+            Href = $link.Href
+            Label = $link.Label
+            DiskTitle = $diskTitle
+            LocalFiles = $localFiles
+        })
+    }
+    return $enriched.ToArray()
+}
+
+function Build-LinkListHtml {
+    param([object[]]$Links)
+
+    $items = New-Object System.Text.StringBuilder
+    foreach ($link in @($Links)) {
+        foreach ($localFile in @($link.LocalFiles)) {
+            [void]$items.Append('<a class="inline-link" href="')
+            [void]$items.Append((Html-Encode $localFile.LocalHref))
+            [void]$items.Append('" download>')
+            [void]$items.Append((Html-Encode $localFile.FileName))
+            [void]$items.Append('</a>')
+        }
+        [void]$items.Append('<a class="inline-link" href="')
+        [void]$items.Append((Html-Encode $link.Href))
+        [void]$items.Append('" target="_blank" rel="noreferrer">')
+        [void]$items.Append((Html-Encode (Link-DisplayLabel $link.Label $link.Href)))
+        [void]$items.Append('</a>')
+    }
+    return $items.ToString()
+}
+
+function Build-IntroHtml {
+    param(
+        [string]$PlainText,
+        [object[]]$Links
+    )
+
+    $text = if ($null -eq $PlainText) { '' } else { $PlainText.Trim() }
+    $text = [regex]::Replace($text, '\s*最后修改:.*$', '').Trim()
+    foreach ($link in @($Links)) {
+        if (-not [string]::IsNullOrWhiteSpace($link.Href)) {
+            $text = $text.Replace($link.Href, '').Trim()
+        }
+        if ($link.Label -match '^https?://' -and -not [string]::IsNullOrWhiteSpace($link.Label)) {
+            $text = $text.Replace($link.Label, '').Trim()
+        }
+    }
+    $text = [regex]::Replace($text, '\s+', ' ').Trim()
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        return '<p>' + (Html-Encode $NoIntro) + '</p>'
+    }
+
+    $labels = @($ReportIntroLabel, $CourseIntroLabel, $ReportContentLabel)
+    $pattern = '(' + (($labels | ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\s*[:' + [char]0xFF1A + ']'
+    $matches = [regex]::Matches($text, $pattern)
+    $html = New-Object System.Text.StringBuilder
+
+    if ($matches.Count -eq 0) {
+        [void]$html.Append('<p>' + (Html-Encode $text) + '</p>')
+        return $html.ToString()
+    }
+
+    $first = $matches[0]
+    $lead = $text.Substring(0, $first.Index).Trim()
+    if (-not [string]::IsNullOrWhiteSpace($lead)) {
+        [void]$html.Append('<p>' + (Html-Encode $lead) + '</p>')
+    }
+
+    for ($i = 0; $i -lt $matches.Count; $i++) {
+        $label = $matches[$i].Groups[1].Value
+        $contentStart = $matches[$i].Index + $matches[$i].Length
+        $contentEnd = if ($i + 1 -lt $matches.Count) { $matches[$i + 1].Index } else { $text.Length }
+        $content = $text.Substring($contentStart, $contentEnd - $contentStart).Trim()
+        if ($label -eq $ReportContentLabel) {
+            continue
+        } else {
+            [void]$html.Append('<p><strong>' + (Html-Encode $label) + '</strong><br>' + (Html-Encode $content) + '</p>')
+        }
+    }
+
+    return $html.ToString()
 }
 
 function Login-Course {
@@ -245,8 +469,9 @@ for ($i = 0; $i -lt $sections.Count; $i++) {
         }
 
         $isReport = $name.StartsWith($ReportPrefix)
+        $isOpeningLeader = ($name -eq $OpeningLeaderName)
         $isGroupSummary = ($name -eq $GroupSummary)
-        if ($isReport -or $isGroupSummary) {
+        if ($isReport -or $isOpeningLeader -or $isGroupSummary) {
             $rowIndex++
             $expert = $name
             $title = $name
@@ -258,6 +483,9 @@ for ($i = 0; $i -lt $sections.Count; $i++) {
                     $title = $match.Groups[2].Value.Trim()
                     if ([string]::IsNullOrWhiteSpace($title)) { $title = $Untitled }
                 }
+            } elseif ($isOpeningLeader) {
+                $expert = $JiangKai
+                $title = $OpeningLeaderTitle
             }
 
             $rows.Add([pscustomobject]@{
@@ -270,25 +498,31 @@ for ($i = 0; $i -lt $sections.Count; $i++) {
                 RawName = $name
                 Url = $href
                 IsReport = $isReport
+                HasDetailPage = ($isReport -or $isOpeningLeader)
                 Intro = if ($isGroupSummary) { $GroupIntro } else { $NoIntro }
+                IntroHtml = ''
                 ImageHref = 'assets/experts/placeholder.svg'
                 ImageFile = 'placeholder.svg'
                 Resources = @()
+                ReportLinks = @()
             })
         }
     }
 }
 
 foreach ($row in $rows) {
-    if (-not $row.IsReport) { continue }
+    if (-not $row.HasDetailPage) { continue }
     try {
         $detail = Invoke-WebRequest -Uri $row.Url -WebSession $session -TimeoutSec 90
-        $bodyMatch = [regex]::Match($detail.Content, '(?is)<div class="box py-3 generalbox[^>]*>\s*<div class="no-overflow">(.*?)</div>\s*</div>')
-        $bodyHtml = if ($bodyMatch.Success) { $bodyMatch.Groups[1].Value } else { '' }
+        $bodyHtml = Extract-PageContentHtml $detail.Content
         $intro = Text-FromHtml $bodyHtml
+        $links = Extract-BodyLinks -BodyHtml $bodyHtml -BaseUrl $row.Url
+        $links = Enrich-ReportLinks -Links $links -Directory $ResourceDir
         if (-not [string]::IsNullOrWhiteSpace($intro)) {
             $row.Intro = $intro
         }
+        $row.ReportLinks = $links
+        $row.IntroHtml = Build-IntroHtml -PlainText $row.Intro -Links $links
 
         $imageMatches = [regex]::Matches($bodyHtml, '(?is)<img\b[^>]*\bsrc="([^"]+)"[^>]*>')
         foreach ($image in $imageMatches) {
@@ -303,6 +537,13 @@ foreach ($row in $rows) {
         }
     } catch {
         $row.Intro = $row.Intro + ' ' + $_.Exception.Message
+        $row.IntroHtml = Build-IntroHtml -PlainText $row.Intro -Links @()
+    }
+}
+
+foreach ($row in $rows) {
+    if ([string]::IsNullOrWhiteSpace($row.IntroHtml)) {
+        $row.IntroHtml = Build-IntroHtml -PlainText $row.Intro -Links @($row.ReportLinks)
     }
 }
 
@@ -343,13 +584,13 @@ foreach ($row in $rows) {
         expert = $row.Expert
         title = $row.Title
         timeSlot = $row.TimeSlot
-        intro = $row.Intro
+        introHtml = $row.IntroHtml
         imageHref = $row.ImageHref
         pageUrl = $row.Url
     }
 }
 $profilesJson = ($profileMap | ConvertTo-Json -Depth 8)
-$profilesJson = $profilesJson.Replace('<', '\u003c').Replace('>', '\u003e').Replace('&', '\u0026')
+$profilesJson = $profilesJson.Replace('</script', '<\/script')
 
 $tableRows = New-Object System.Text.StringBuilder
 foreach ($row in $rows) {
@@ -365,12 +606,46 @@ foreach ($row in $rows) {
         [void]$resourceLinks.Append('<span class="muted">-</span>')
     }
 
+    $localPdfLinks = New-Object System.Collections.Generic.List[object]
+    $seenPdfLinks = @{}
+    foreach ($link in @($row.ReportLinks)) {
+        foreach ($localFile in @($link.LocalFiles)) {
+            if ([string]::IsNullOrWhiteSpace($localFile.LocalHref)) { continue }
+            if ($seenPdfLinks.ContainsKey($localFile.LocalHref)) { continue }
+            $seenPdfLinks[$localFile.LocalHref] = $true
+            $localPdfLinks.Add($localFile)
+        }
+    }
+
+    $titleHtml = Html-Encode $row.Title
+    if ($localPdfLinks.Count -gt 0) {
+        $firstPdf = $localPdfLinks[0]
+        $titleBuilder = New-Object System.Text.StringBuilder
+        [void]$titleBuilder.Append('<a class="title-pdf-link" href="')
+        [void]$titleBuilder.Append((Html-Encode $firstPdf.LocalHref))
+        [void]$titleBuilder.Append('" download>')
+        [void]$titleBuilder.Append((Html-Encode $row.Title))
+        [void]$titleBuilder.Append('</a>')
+        if ($localPdfLinks.Count -gt 1) {
+            [void]$titleBuilder.Append('<div class="title-pdf-list">')
+            for ($pdfIndex = 1; $pdfIndex -lt $localPdfLinks.Count; $pdfIndex++) {
+                $pdf = $localPdfLinks[$pdfIndex]
+                [void]$titleBuilder.Append('<a class="title-pdf-link" href="')
+                [void]$titleBuilder.Append((Html-Encode $pdf.LocalHref))
+                [void]$titleBuilder.Append('" download>')
+                [void]$titleBuilder.Append((Html-Encode $pdf.FileName))
+                [void]$titleBuilder.Append('</a>')
+            }
+            [void]$titleBuilder.Append('</div>')
+        }
+        $titleHtml = $titleBuilder.ToString()
+    }
+
     [void]$tableRows.AppendLine('<tr class="report-row">')
     [void]$tableRows.AppendLine('<td>' + $row.Index + '</td>')
     [void]$tableRows.AppendLine('<td>' + (Html-Encode $row.TimeSlot) + '</td>')
     [void]$tableRows.AppendLine('<td><button class="expert-trigger" type="button" data-expert-id="' + (Html-Encode $row.Id) + '"><img class="avatar" src="' + (Html-Encode $row.ImageHref) + '" alt=""><span>' + (Html-Encode $row.Expert) + '</span></button></td>')
-    [void]$tableRows.AppendLine('<td>' + (Html-Encode $row.Title) + '</td>')
-    [void]$tableRows.AppendLine('<td><a href="' + (Html-Encode $row.Url) + '" target="_blank" rel="noreferrer">Moodle</a></td>')
+    [void]$tableRows.AppendLine('<td class="title-cell">' + $titleHtml + '</td>')
     [void]$tableRows.AppendLine('<td>' + $resourceLinks.ToString() + '</td>')
     [void]$tableRows.AppendLine('</tr>')
 }
@@ -522,6 +797,25 @@ $html = @"
       white-space: nowrap;
     }
     .resource-chip:hover { text-decoration: underline; }
+    .title-pdf-link {
+      color: var(--accent);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .title-pdf-link:hover { text-decoration: underline; }
+    .title-pdf-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+    .inline-link {
+      display: inline-flex;
+      margin: 4px 8px 0 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
     .muted { color: var(--muted); }
     .resources {
       margin-top: 24px;
@@ -608,6 +902,14 @@ $html = @"
       margin: 0 0 14px;
       white-space: pre-wrap;
     }
+    .intro-content p {
+      margin: 0 0 16px;
+    }
+    .intro-content strong {
+      display: inline-block;
+      margin-bottom: 4px;
+      color: var(--accent-2);
+    }
     .close-btn {
       margin-left: auto;
       width: 38px;
@@ -644,8 +946,7 @@ $html = @"
             <th>Time</th>
             <th>Expert / Activity</th>
             <th>Title</th>
-            <th>Course Link</th>
-            <th>Local Resources</th>
+            <th>Files</th>
           </tr>
         </thead>
         <tbody>
@@ -674,7 +975,7 @@ $($resourceItems.ToString())
       <div class="modal-body">
         <h3 id="modal-title"></h3>
         <h3>$(Html-Encode $IntroTitle)</h3>
-        <p id="modal-intro"></p>
+        <div id="modal-intro" class="intro-content"></div>
         <p><a id="modal-link" href="#" target="_blank" rel="noreferrer">Open in Moodle</a></p>
       </div>
     </article>
@@ -696,7 +997,7 @@ $profilesJson
       document.getElementById('modal-name').textContent = profile.expert || '';
       document.getElementById('modal-time').textContent = profile.timeSlot || '';
       document.getElementById('modal-title').textContent = profile.title || '';
-      document.getElementById('modal-intro').textContent = profile.intro || '';
+      document.getElementById('modal-intro').innerHTML = profile.introHtml || '';
       document.getElementById('modal-link').href = profile.pageUrl || '#';
       backdrop.classList.add('open');
     }
