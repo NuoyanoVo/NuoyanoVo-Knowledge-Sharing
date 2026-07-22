@@ -3,24 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>一些md文件</title>
-  <link rel="icon" type="image/svg+xml" href="assets/site-icon.svg">
-  <link rel="stylesheet" href="styles.css">
+  <title>知识库内容</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/site-icon.svg">
+  <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
   <header>
-    <h1>一些md文件</h1>
+    <h1>知识库内容</h1>
     <p>知识库内容 - <time id="generated-time"></time></p>
   </header>
   <main>
     <div class="toolbar">
       <div class="summary">Markdown files: 2</div>
-      <a class="resource-chip" href="index.html">返回报告专家</a>
+      <a class="resource-chip" href="../index.html">主页</a>
+      <a class="resource-chip" href="../北京大学2026“教育技术前沿”暑期学校总结/index.html">返回报告专家</a>
     </div>
     <section class="knowledge" id="knowledge">
       <div class="knowledge-head">
         <h2>知识库内容</h2>
-        <a id="knowledge-open" class="knowledge-open" href="Knowledge/codex-install.md" target="_blank" rel="noreferrer">打开原文件</a>
+        <a id="knowledge-open" class="knowledge-open" href="codex-install.md" target="_blank" rel="noreferrer">打开原文件</a>
       </div>
       <div class="knowledge-layout">
         <nav id="knowledge-list" class="knowledge-list" aria-label="知识库 Markdown 文件"></nav>
@@ -36,12 +37,12 @@
 [
     {
         "title":  "Windows 下 Codex 安装、配置与使用指南",
-        "path":  "Knowledge/codex-install.md",
+        "path":  "codex-install.md",
         "content":  "# Windows 下 Codex 安装、配置与使用指南\n\n## 一、前置准备\n\n1. 安装Node.js：去Node.js官网（https://nodejs.org/zh-cn/download）下载 Windows x64版本并安装（.msi 格式）。\n\n2. 检查Node.js是否安装成功：打开 PowerShell 或 CMD，执行下面其中的一个命令，如果能输出版本号，说明 Node.js 和 npm 已经可用。\n\n   ```bash\n    node -v # 输出 Node.js 版本，如 v22.2.0 \n    npm -v # 输出 npm 版本，如 v10.7.0\n   ```\n\n## 二、安装 Codex CLI\n\n1. 安装Codex CLI：以管理员身份打开 PowerShell 或 CMD，执行下面其中的一个 npm 包的全局安装命令：\n\n   ```bash\n   npm install -g @openai/codex\n   npm install -g @openai/codex --registry=https://registry.npmmirror.com\n   ```\n\n\n2. 检查Codex CLI是否安装成功：安装完成后，重新打开终端执行下面的命令，如果能输出版本号，说明 Codex CLI 安装成功。\n\n   ```bash\n   codex --version # 检验Codex CLI 是否安装成功\n   ```\n\n## 三、安装桌面版codex\n\n1. 安装桌面版codex：在Microsoft Store里面直接下载安装。（注：桌面版codex看自己需要可装可不装，如果不喜欢命令行的黑窗口就装）\n\n## 四、安装插件版codex\n\n1. 安装插件版codex：先安装vscode，然后在vscode里面装Codex – OpenAI’s coding agent插件。（注：插件版codex看自己需要可装可不装）\n\n## 五、API Key授权与配置\n\nCodex 安装完成后，还需要完成账号授权或 API Key 配置，才能正常使用，这里我们用【方式二：API Key 配置】。\n\n| 方式                     | 适合人群                                   | 配置特点                                   |\n| ------------------------ | ------------------------------------------ | ------------------------------------------ |\n| 方式一：ChatGPT 账号授权 | 已有 ChatGPT Plus、Pro、Team 等账号的用户  | 通过浏览器登录授权，流程更接近官方默认体验 |\n| 方式二：API Key 配置     | 没有 ChatGPT 订阅、希望使用 API Key 的用户 | 需要手动维护 `.codex` 目录中的配置文件     |\n\n### 方式一：ChatGPT 账号授权\n\n1. 在终端中执行：\n\n   ```bash\n   codex login\n   ```\n\n\n2. 按终端提示打开浏览器，完成 ChatGPT 登录和授权。成功后返回终端，看到登录成功提示即可。之后可用下面命令查看当前认证状态：\n\n   ```bash\n   codex login status\n   ```\n\n### 方式二：API Key 配置\n\n1. 获取API Key：具体看【六、API Key获取】。\n\n2. 寻找 .codex 文件夹：打开文件资源管理器，进入用户目录（路径：C:\\Users\\你的用户名），开启「显示隐藏的项目」（顶部「查看」选项卡勾选），找到 .codex 文件夹。\n\n3. 在 .codex 文件夹中，手动创建两个文件：auth.json 和 config.toml\n\n4. 配置 auth.json 文件（存储 API Key）： 用记事本或 VS Code 打开 auth.json，粘贴以下内容，将 sk-xxx 替换为你获取到的实际 API Key，具体看【六、API Key获取】：\n\n   ```bash\n   {\"OPENAI_API_KEY\": \"sk-xxx\"}\n   ```\n\n\n5. 配置 config.toml 文件（配置模型和中转地址）： 用记事本或 VS Code 打开 config.toml，粘贴以下内容（直接复制即可）。\n\n   ```bash\n   model_provider = \"OpenAI\"\n   model = \"gpt-5.5\"\n   review_model = \"gpt-5.5\"\n   model_reasoning_effort = \"xhigh\"\n   disable_response_storage = true\n   network_access = \"enabled\"\n   windows_wsl_setup_acknowledged = true\n\n   [model_providers.OpenAI]\n   name = \"OpenAI\"\n   base_url = \"https://yuzapi.fun\"\n   wire_api = \"responses\"\n   requires_openai_auth = true\n\n   [features]\n   goals = true\n   ```\n\n\n6. 验证API Key 配置是否成功：重启PowerShell 或 CMD，再执行下面的命令，如果能进入下面的 Codex 交互界面，说明配置已经成功！已经成功！已经成功！\n\n   ```bash\n   codex\n   ```\n\n   ![78196340606](codex-install.assets/1781963406063.png)\n\n## 六、API Key获取\n\n1. 获取API Key：注册帐号获取API Key（https://yuzapi.fun/register?aff=CVAYSV57LVMK），配置到 auth.json里。\n\n   ![78196360449](codex-install.assets/1781963604495.png)\n\n   ![78196372720](codex-install.assets/1781963727205.png)\n\n   ![78196387975](codex-install.assets/1781963879759.png)\n\n2. 帐号充值并用卡密兑换（https://pay.ldxp.cn/shop/O6E79ERA）。\n\n   ![78177177111](codex-install.assets/1781771771117.png)\n\n   ![78196429507](codex-install.assets/1781964295073.png)\n\n   ​\n\n\n\n"
     },
     {
         "title":  "重装系统",
-        "path":  "Knowledge/重装系统方法.md",
+        "path":  "重装系统方法.md",
         "content":  "# 重装系统\r\n\r\n## 认识基本知识\r\n\r\n1.  装系统的本质：运行在U盘内存放好的windows镜像\r\n2.  安装系统的方法：第一种：微软官方ISO镜像文件直接写入；第二种：PE便携式操作系统辅助安装写入（PE (Preinstallation Environment, 预安装环境)）。\r\n\r\n\r\n3.  U盘格式化的方式：FAT32：单个分区不能超过32G，单个文件不能超过4G。exFAT和NTFS：老旧主板和老旧电脑无法识别。\r\n\r\n\r\n4.  磁盘分区格式和启动引导：开机引导方式：Legacy引导、UEFI引导；存储数据的结构：MBR分区、GPT分区；MBR分区要用Legacy引导，GPT分区的要用UEFI引导。\r\n\r\n## 第一种：微软官方ISO镜像文件直接写入\r\n\r\n1.  下载系统安装文件进U盘\r\n\r\n```\r\n百度搜索微软官网下载win10\r\n下载win10启动盘制作工具\r\n打开win10启动盘制作工具\r\n接受许可条款\r\n选择为另一台电脑创建安装介质（U盘、DVD或ISO文件）\r\n选择U盘（ISO文件就是单纯下载安装包）\r\n加载中，U盘被格式化为FAT32格式\r\nU盘有了win10的安装文件（安装系统时文件必须放在根目录下）\r\n```\r\n\r\n2.  正式安装\r\n\r\n```\r\n进入BIOS画面（按开机按钮并不断按delete键（不同电脑不一样，可能是F2、F10、F12）;可以修改语言为中文；把UEFI引导的U盘放置于第一启动项，优先于磁盘本身启动；选择Exit选项卡下的Save Change \u0026 Rest（即保存并重启电脑））\r\n进入安装流程（下一步；下一步；删除分区；新建分区；选择C盘；（有可能会报错，那么刷新；新建分区；选择C盘）；下一步；加载中：写入系统；10秒后重启；拔掉U盘;Win10初始化界面（自由选择；等待几分钟））\r\n调出我的电脑和控制面板（桌面右键，个性化，主题，桌面图标设置，勾选计算机，控制面板，确定）\r\n装驱动\r\n```\r\n\r\n3.  BIOS的高级模式：\r\n\r\n```\r\nBoot选项卡下的Boot Option #1选择为UEFI引导的U盘；\r\nExit选项卡下的Save Change \u0026 Rest（即保存并重启电脑）\r\n```\r\n\r\n4.  转换分区表类型\r\n\r\n```\r\n报错：Windows无法安装到这个磁盘。选中的磁盘采用MBR分区表。在EFI系统上，windows只能安装到GPT磁盘。\r\n\r\n方法1.转硬盘格式\r\n在当前安装界面按住【Shift】+【F10】调出命令提示符窗口；\r\n输入【diskpart】，按回车执行;\r\n进入DISKPART命令模式，输入【list disk】回车，列出当前磁盘信息；\r\n要转换磁盘0格式，则输入【select disk 0】回车，输入【clean】，删除磁盘分区；\r\n输入【convert gpt】则转为GPT；或者输入【convert MBR】 转换为 MBR格式；\r\n最后输入两次 【exit】 回车退出命令提示符，返回安装界面继续安装系统。\r\n```\r\n\r\n![](重装系统方法.assets/image1.jpeg)\r\n\r\n## 第二种：PE便携式操作系统辅助安装写入\r\n\r\n1.  微PE制作\r\n\r\n```\r\n百度搜索微PE进入微PE官网\r\n下载：微PE工具箱V2.0 64位\r\n打开微PE安装包，安装进U盘内\r\nU盘被分成两个分区\r\n下载win10的ISO文件\r\n```\r\n\r\n2.  MSDN下载纯净版ISO镜像文件\r\n\r\n```\r\n检验文件完整性：哈希值\r\nIHasher计算哈希值\r\n```\r\n\r\n3.  安装步骤\r\n\r\n```\r\n进入BIOS画面（按开机按钮并不断按delete键，不同电脑不一样，可能是F2、F10、F12）；把UEFI引导的U盘放置于第一启动项，优先于磁盘本身启动，保存并退出 \r\n进入微PE桌面，打开分区工具，快速分区（注意对齐分区到此扇区的整数倍、转换分区表类型为GUID格式）\r\n自备网卡驱动或是驱动精灵装网卡驱动、其它驱动\r\n调出我的电脑和控制面板（个性化，主题，桌面图标设置）\r\n```\r\n\r\n![mage](重装系统方法.assets/image2.jpeg)\r\n\r\n![mage](重装系统方法.assets/image3.jpeg)\r\n\r\n![mage](重装系统方法.assets/image4.jpeg)\r\n\r\n![mage](重装系统方法.assets/image5.jpeg)\r\n\r\n\r\n\r\n## 安装中间中断出错以及解决\r\n\r\n![mage](重装系统方法.assets/image6.png)\r\n\r\n![mage](重装系统方法.assets/image7.png)\r\n\r\nShift+f10；regedit；"
     }
 ]
@@ -263,3 +264,5 @@
   </script>
 </body>
 </html>
+
+
