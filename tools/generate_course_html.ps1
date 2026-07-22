@@ -16,7 +16,7 @@ $Root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
 $AssetsDir = Join-Path $Root 'assets'
 $ExpertDir = Join-Path $AssetsDir 'experts'
 $ResourceDir = Join-Path $AssetsDir 'resources'
-$HtmlName = (-join @([char]0x62A5, [char]0x544A, [char]0x65F6, [char]0x6BB5, [char]0x6574, [char]0x7406)) + '.html'
+$HtmlName = 'index.html'
 $HtmlPath = Join-Path $Root $HtmlName
 
 New-Item -ItemType Directory -Force -Path $ExpertDir, $ResourceDir | Out-Null

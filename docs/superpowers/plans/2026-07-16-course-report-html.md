@@ -4,7 +4,7 @@
 
 **Goal:** Build a local interactive HTML page from the course report schedule, including expert popups, downloaded expert images, and downloaded course file resources.
 
-**Architecture:** A PowerShell scraper logs into the Moodle course, extracts report sections, expert detail pages, and resource links, downloads binary assets into local folders, and writes a static `报告时段整理.html`. A separate verifier checks the generated artifact and local assets.
+**Architecture:** A PowerShell scraper logs into the Moodle course, extracts report sections, expert detail pages, and resource links, downloads binary assets into local folders, and writes a static `index.html` for GitHub Pages. A separate verifier checks the generated artifact and local assets.
 
 **Tech Stack:** PowerShell, Moodle HTML parsing with regular expressions plus HTML decoding, static HTML/CSS/JavaScript.
 
@@ -17,12 +17,12 @@
 
 - [ ] **Step 1: Write the failing verifier**
 
-Create a verifier that checks `报告时段整理.html`, table rows, expert modal data, avatar directory, and resources directory.
+Create a verifier that checks `index.html`, table rows, expert modal data, avatar directory, and resources directory.
 
 - [ ] **Step 2: Run verifier to verify it fails**
 
 Run: `powershell -ExecutionPolicy Bypass -File .\tests\verify_course_html.ps1`
-Expected: FAIL because `报告时段整理.html` does not exist yet.
+Expected: FAIL because `index.html` does not exist yet.
 
 ### Task 2: Scraper And Generator
 
@@ -30,7 +30,7 @@ Expected: FAIL because `报告时段整理.html` does not exist yet.
 - Create: `tools/generate_course_html.ps1`
 - Create: `assets/experts/`
 - Create: `assets/resources/`
-- Create: `报告时段整理.html`
+- Create: `index.html`
 
 - [ ] **Step 1: Implement login and course extraction**
 
@@ -46,12 +46,12 @@ Find `modtype_resource` activities, follow their Moodle resource URLs, resolve f
 
 - [ ] **Step 4: Generate static HTML**
 
-Write `报告时段整理.html` with a report table, local avatar thumbnails, resource links, and a click-to-open expert introduction modal.
+Write `index.html` with a report table, local avatar thumbnails, resource links, and a click-to-open expert introduction modal.
 
 ### Task 3: Verification
 
 **Files:**
-- Read: `报告时段整理.html`
+- Read: `index.html`
 - Read: `assets/experts/`
 - Read: `assets/resources/`
 - Run: `tests/verify_course_html.ps1`
@@ -59,7 +59,7 @@ Write `报告时段整理.html` with a report table, local avatar thumbnails, re
 - [ ] **Step 1: Run the verifier**
 
 Run: `powershell -ExecutionPolicy Bypass -File .\tests\verify_course_html.ps1`
-Expected: PASS with 17 report/activity rows and local asset/resource checks.
+Expected: PASS with 18 report/activity rows and local asset/resource checks.
 
 - [ ] **Step 2: Inspect generated summary**
 

@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
 
 $root = Split-Path -Parent (Split-Path -Parent $PSCommandPath)
-$htmlName = (-join @([char]0x62A5, [char]0x544A, [char]0x65F6, [char]0x6BB5, [char]0x6574, [char]0x7406)) + '.html'
+$htmlName = 'index.html'
 $introText = -join @([char]0x4E13, [char]0x5BB6, [char]0x7B80, [char]0x4ECB)
 $jiangText = -join @([char]0x848B, [char]0x51EF)
 $reportIntroText = -join @([char]0x62A5, [char]0x544A, [char]0x5185, [char]0x5BB9, [char]0x7B80, [char]0x4ECB)
