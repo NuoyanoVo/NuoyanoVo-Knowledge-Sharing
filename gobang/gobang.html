@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>黑金人机五子棋｜足球预览动效</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:system-ui,Microsoft YaHei}
+body{
+    background: #0a0a0f;
+    background-image: radial-gradient(#151522 1px, transparent 1px);
+    background-size: 24px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 0;
+    color: #fff;
+}
+.title{
+    font-size: 28px;
+    font-weight: bold;
+    background: linear-gradient(90deg,#ffd700,#fff,#ffd700);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 12px #ffd70055;
+    margin-bottom: 16px;
+}
+.header-box{
+    display:flex;
+    gap:24px;
+    align-items:center;
+    margin-bottom:14px;
+}
+#diffSelect{
+    padding:8px 12px;
+    font-size:16px;
+    border-radius:8px;
+    background:#181826;
+    color:#ffd700;
+    border:1px solid #ffd70066;
+    outline:none;
+    transition: all 0.3s;
+}
+#diffSelect:focus{
+    box-shadow: 0 0 8px #ffd70088;
+    border-color:#ffd700;
+}
+#resetBtn{
+    padding:8px 20px;
+    background: linear-gradient(135deg,#b8860b,#ffd700);
+    border:none;
+    color:#000;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:600;
+    transition: 0.3s ease;
+    box-shadow: 0 0 10px #ffd70044;
+}
+#resetBtn:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 0 18px #ffd70099;
+}
+#tipText{
+    font-size:20px;
+    margin-bottom:20px;
+    height:30px;
+    color:#ffdf80;
+    letter-spacing:1px;
+}
+/* 棋盘容器 */
+#boardWrap{
+    position:relative;
+    box-shadow: 0 0 30px #ffd70022;
+    border-radius:4px;
+}
+#board{
+    display:grid;
+    grid-template-columns: repeat(15, 36px);
+    background:#2c2010;
+    border:4px solid #b8860b;
+}
+.cell{
+    width:36px;
+    height:36px;
+    border:1px solid #5c4222;
+    position:relative;
+    transition: background 0.2s;
+}
+.cell:hover{
+    background: #402e18;
+}
+/* 真实棋子 */
+.piece{
+    width:30px;
+    height:30px;
+    border-radius:50%;
+    position:absolute;
+    top:3px;
+    left:3px;
+    z-index:2;
+    box-shadow: 0 2px 6px #0008;
+}
+.black{
+    background:radial-gradient(circle at 30% 30%, #333, #000);
+    box-shadow: 0 0 8px #000, inset -3px -3px 6px #0006;
+}
+.white{
+    background:radial-gradient(circle at 30% 30%, #fff, #bbb);
+    border:1px solid #999;
+    box-shadow: 0 0 8px #fff4, inset -3px -3px 6px #9996;
+}
+/* 高清写实足球预览 */
+#footballPreview{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3CradialGradient id='ballShade' cx='35%25' cy='35%25' r='70%25'%3E%3Cstop offset='0%25' stop-color='%23ffffff'/%3E%3Cstop offset='100%25' stop-color='%23e0e0e0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx='50' cy='50' r='48' fill='url(%23ballShade)' stroke='%23aaa' stroke-width='1'/%3E%3Cpath d='M50 18 L32 30 L26 50 L32 70 L50 82 L68 70 L74 50 L68 30 Z' fill='none' stroke='%23000' stroke-width='2.8'/%3E%3Ccircle cx='50' cy='22' r='9' fill='%23000'/%3E%3Ccircle cx='24' cy='42' r='9' fill='%23000'/%3E%3Ccircle cx='76' cy='42' r='9' fill='%23000'/%3E%3Ccircle cx='34' cy='72' r='9' fill='%23000'/%3E%3Ccircle cx='66' cy='72' r='9' fill='%23000'/%3E%3Cpath d='M50 18 L50 8' stroke='%23000' stroke-width='2.8'/%3E%3Cpath d='M26 50 L16 50' stroke='%23000' stroke-width='2.8'/%3E%3Cpath d='M74 50 L84 50' stroke='%23000' stroke-width='2.8'/%3E%3Cpath d='M32 70 L24 80' stroke='%23000' stroke-width='2.8'/%3E%3Cpath d='M68 70 L76 80' stroke='%23000' stroke-width='2.8'/%3E%3C/svg%3E");
+    background-size:cover;
+    position:absolute;
+    pointer-events:none;
+    z-index:99;
+    opacity:0;
+    transform: scale(0.85);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    animation: roll 0.8s linear infinite;
+}
+#footballPreview.show{
+    opacity:0.88;
+    transform: scale(1);
+}
+/* 足球滚动动画 */
+@keyframes roll{
+    from{transform:rotate(0deg)}
+    to{transform:rotate(360deg)}
+}
+/* 胜利霓虹弹窗 */
+.winMask{
+    position:absolute;
+    inset:0;
+    background:rgba(0,0,0,0.75);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:42px;
+    font-weight:bold;
+    z-index:999;
+    display:none;
+}
+.winText{
+    background: linear-gradient(90deg,#ffd700,#fff);
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 20px #ffd700;
+    animation: flash 1.2s ease infinite alternate;
+}
+@keyframes flash{
+    from{filter: brightness(1)}
+    to{filter: brightness(1.4)}
+}
+</style>
+</head>
+<body>
+<div class="title">黑金五子棋 · 人机对战</div>
+<div class="header-box">
+    <label>AI难度：</label>
+    <select id="diffSelect">
+        <option value="easy">简单</option>
+        <option value="mid" selected>中等</option>
+        <option value="hard">困难</option>
+    </select>
+    <button id="resetBtn">重新开局</button>
+</div>
+<div id="tipText">黑棋（玩家）先行，请落子</div>
+<div id="boardWrap">
+    <div id="footballPreview"></div>
+    <div id="board"></div>
+    <div class="winMask" id="winMask">
+        <div class="winText"></div>
+    </div>
+</div>
+
+<script>
+const size = 15;
+const boardDom = document.getElementById('board');
+const boardWrap = document.getElementById('boardWrap');
+const football = document.getElementById('footballPreview');
+const tipText = document.getElementById('tipText');
+const diffSelect = document.getElementById('diffSelect');
+const resetBtn = document.getElementById('resetBtn');
+const winMask = document.getElementById('winMask');
+const winText = winMask.querySelector('.winText');
+
+// 棋盘数据 0空 1玩家黑 2AI白
+let board = [];
+let gameOver = false;
+let isPlayerTurn = true;
+
+// 初始化棋盘
+function initGame(){
+    gameOver = false;
+    isPlayerTurn = true;
+    winMask.style.display = 'none';
+    tipText.textContent = '黑棋（玩家）先行，请落子';
+    board = Array(size).fill().map(()=>Array(size).fill(0));
+    boardDom.innerHTML = '';
+    // 生成格子
+    for(let y=0;y<size;y++){
+        for(let x=0;x<size;x++){
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            // 鼠标移入显示足球预览
+            cell.onmousemove = (e)=>{
+                if(gameOver || !isPlayerTurn) {
+                    football.classList.remove('show');
+                    return;
+                }
+                const rect = cell.getBoundingClientRect();
+                const wrapRect = boardWrap.getBoundingClientRect();
+                football.style.left = (rect.left - wrapRect.left + 3) + 'px';
+                football.style.top = (rect.top - wrapRect.top + 3) + 'px';
+                if(board[y][x] === 0){
+                    football.classList.add('show');
+                }else{
+                    football.classList.remove('show');
+                }
+            }
+            cell.onmouseleave = ()=> football.classList.remove('show');
+            cell.onclick = ()=> placePiece(x,y,1);
+            boardDom.appendChild(cell);
+        }
+    }
+}
+
+// 落子逻辑
+function placePiece(x,y,color){
+    if(gameOver || !isPlayerTurn) return;
+    if(board[y][x] !== 0) return;
+    // 放置棋子
+    board[y][x] = color;
+    renderSinglePiece(x,y,color);
+    football.classList.remove('show');
+    // 判断胜利
+    if(checkWin(x,y,color)){
+        gameOver = true;
+        winText.textContent = color===1 ? '恭喜你战胜AI！' : 'AI获胜，再接再厉！';
+        winMask.style.display = 'flex';
+        return;
+    }
+    // 切换AI回合
+    isPlayerTurn = false;
+    tipText.textContent = 'AI思考中...';
+    setTimeout(()=>aiPlay(), 600);
+}
+
+// 渲染单个棋子DOM
+function renderSinglePiece(x,y,color){
+    const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    const piece = document.createElement('div');
+    piece.className = 'piece ' + (color===1 ? 'black' : 'white');
+    cell.appendChild(piece);
+}
+
+// 胜负判定：五连子
+function checkWin(x,y,color){
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for(let [dx,dy] of dirs){
+        let cnt = 1;
+        let cx=x+dx, cy=y+dy;
+        while(cx>=0&&cx<size&&cy>=0&&cy<size&&board[cy][cx]===color){cnt++;cx+=dx;cy+=dy}
+        cx=x-dx; cy=y-dy;
+        while(cx>=0&&cx<size&&cy>=0&&cy<size&&board[cy][cx]===color){cnt++;cx-=dx;cy-=dy}
+        if(cnt>=5) return true;
+    }
+    return false;
+}
+
+// AI落子核心（分难度）
+function aiPlay(){
+    const diff = diffSelect.value;
+    let targetX, targetY;
+    if(diff === 'easy'){
+        // 简单：随机空位
+        const empty = [];
+        for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(board[y][x]===0)empty.push([x,y]);
+        const r = empty[Math.floor(Math.random()*empty.length)];
+        targetX=r[0];targetY=r[1];
+    }else if(diff === 'mid'){
+        // 中等：简单防守+进攻优先
+        let best = null;
+        let maxScore = -9999;
+        for(let y=0;y<size;y++){
+            for(let x=0;x<size;x++){
+                if(board[y][x]!==0)continue;
+                let s = getScore(x,y,2)*1.2 + getScore(x,y,1);
+                if(s>maxScore){maxScore=s;best=[x,y]}
+            }
+        }
+        targetX=best[0];targetY=best[1];
+    }else{
+        // 困难：强力进攻防守评分
+        let best = null;
+        let maxScore = -9999;
+        for(let y=0;y<size;y++){
+            for(let x=0;x<size;x++){
+                if(board[y][x]!==0)continue;
+                let attack = getScore(x,y,2) * 2;
+                let defend = getScore(x,y,1) * 1.8;
+                let s = attack + defend;
+                if(s>maxScore){maxScore=s;best=[x,y]}
+            }
+        }
+        targetX=best[0];targetY=best[1];
+    }
+    // AI落子
+    board[targetY][targetX] = 2;
+    renderSinglePiece(targetX, targetY, 2);
+    if(checkWin(targetX, targetY, 2)){
+        gameOver = true;
+        winText.textContent = 'AI获胜，再接再厉！';
+        winMask.style.display = 'flex';
+        return;
+    }
+    isPlayerTurn = true;
+    tipText.textContent = '轮到你落子（黑棋）';
+}
+
+// 棋型评分函数（AI判断依据）
+function getScore(x,y,color){
+    let total = 0;
+    const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+    for(let [dx,dy] of dirs){
+        let line = [];
+        // 左右各4格
+        for(let i=-4;i<=4;i++){
+            const cx = x + dx*i;
+            const cy = y + dy*i;
+            if(cx<0||cx>=size||cy<0||cy>=size) line.push(-1);
+            else line.push(board[cy][cx]);
+        }
+        // 统计连续同色计分
+        let cnt=0;
+        for(let v of line){
+            if(v===color) cnt++;
+            else cnt=0;
+            total += cnt*cnt;
+        }
+    }
+    return total;
+}
+
+// 重置游戏
+resetBtn.onclick = initGame;
+// 页面加载初始化
+window.onload = initGame;
+</script>
+</body>
+</html>
